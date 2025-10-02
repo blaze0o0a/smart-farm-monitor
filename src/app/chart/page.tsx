@@ -1,0 +1,185 @@
+'use client'
+
+import React, { useState, useEffect, useCallback } from 'react'
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts'
+import moment from 'moment'
+import useAppStore from '@/stores/useAppStore'
+
+export default function ChartPage() {
+  const { chartData, setChartData, isLoading, setLoading, setError } =
+    useAppStore()
+  const [activeTab, setActiveTab] = useState('Temperature & Humidity')
+  const [startDate, setStartDate] = useState(new Date())
+
+  // 차트 데이터 가져오기
+  const fetchChartData = useCallback(
+    async (dateString: string) => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        const response = await fetch('/api/chart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: dateString }),
+        })
+
+        if (!response.ok) {
+          throw new Error('차트 데이터를 불러오는데 실패했습니다.')
+        }
+
+        const data = await response.json()
+        setChartData(data)
+      } catch (error) {
+        console.error('차트 데이터 가져오기 실패:', error)
+        setError('차트 데이터를 불러오는데 실패했습니다.')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [setLoading, setError, setChartData]
+  )
+
+  useEffect(() => {
+    const dateString = startDate.toISOString().split('T')[0]
+    fetchChartData(dateString)
+  }, [startDate, fetchChartData])
+
+  const handleTabChange = (key: string) => {
+    setActiveTab(key)
+  }
+
+  const onDateChange = (date: moment.Moment | null) => {
+    if (date) {
+      setStartDate(date.toDate())
+    }
+  }
+
+  const renderChart = (dataKeys: string[], colors: string[]) => {
+    return (
+      <div className="w-full" style={{ height: 'calc(60vh)' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+            <XAxis
+              dataKey="time"
+              tickFormatter={(value) => moment(value).format('HH:mm')}
+              fontSize={12}
+              className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl"
+              tick={{ fill: '#9CA3AF' }}
+              axisLine={{ stroke: '#6B7280' }}
+            />
+            <YAxis
+              fontSize={12}
+              className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl"
+              tick={{ fill: '#9CA3AF' }}
+              axisLine={{ stroke: '#6B7280' }}
+            />
+            <Tooltip
+              labelFormatter={(value) =>
+                moment(value).format('YYYY-MM-DD HH:mm:ss')
+              }
+              contentStyle={{
+                backgroundColor: '#374151',
+                border: '1px solid #6B7280',
+                borderRadius: '8px',
+                color: '#F9FAFB',
+              }}
+            />
+            {dataKeys.map((key, index) => (
+              <Line
+                key={key}
+                type="monotone"
+                dataKey={key}
+                stroke={colors[index]}
+                strokeWidth={2}
+                dot={false}
+              />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    )
+  }
+
+  const chartConfigs = [
+    {
+      key: 'Temperature & Humidity',
+      label: '온도 & 습도',
+      dataKeys: ['temperature', 'humidity'],
+      colors: ['#ff7300', '#0088fe'],
+    },
+    {
+      key: 'pH & EC',
+      label: 'pH & EC',
+      dataKeys: ['ph', 'ec'],
+      colors: ['#00c49f', '#ffbb28'],
+    },
+    {
+      key: 'NPK',
+      label: 'NPK',
+      dataKeys: ['n', 'p', 'k'],
+      colors: ['#ff6b6b', '#4ecdc4', '#45b7d1'],
+    },
+  ]
+
+  return (
+    <div className="p-4 pt-20">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 sm:mb-6 md:mb-8 text-center text-white">
+          센서 데이터 차트
+        </h1>
+
+        <div className="bg-gray-800 rounded-lg shadow-md p-6">
+          <div className="flex justify-center mb-6">
+            <input
+              type="date"
+              value={moment(startDate).format('YYYY-MM-DD')}
+              onChange={(e) => onDateChange(moment(e.target.value))}
+              className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white"
+            />
+          </div>
+
+          <div className="w-full">
+            <div className="border-b border-gray-200 mb-6">
+              <nav className="-mb-px flex space-x-8">
+                {chartConfigs.map((config) => (
+                  <button
+                    key={config.key}
+                    onClick={() => handleTabChange(config.key)}
+                    className={`py-2 px-1 sm:py-3 sm:px-2 md:py-4 md:px-2 border-b-2 font-medium text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl ${
+                      activeTab === config.key
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {config.label}
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            <div>
+              {chartConfigs.map((config) => (
+                <div
+                  key={config.key}
+                  className={activeTab === config.key ? 'block' : 'hidden'}
+                >
+                  {renderChart(config.dataKeys, config.colors)}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

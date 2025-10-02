@@ -1,103 +1,76 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import React, { useState, useEffect, useCallback } from 'react'
+import GrafanaCard from '@/components/dashboard/GrafanaCard'
+import { ChartDataPoint, SensorConfig } from '@/types/sensor'
+import { SENSOR_CONFIGS } from '@/constants/sensors'
+
+export default function Dashboard() {
+  const [dashboardData, setDashboardData] = useState<ChartDataPoint[]>([])
+
+  // 12시간 대시보드 데이터 가져오기
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      const response = await fetch('/api/dashboard')
+      if (response.ok) {
+        const data = await response.json()
+        setDashboardData(data)
+      }
+    } catch (error) {
+      console.error('대시보드 데이터 가져오기 실패:', error)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchDashboardData()
+    // 5분마다 데이터 갱신
+    const interval = setInterval(fetchDashboardData, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [fetchDashboardData])
+
+  // 히스토리 데이터에서 최근값을 실시간 데이터로 사용
+  const realTimeData =
+    dashboardData.length > 0
+      ? dashboardData[dashboardData.length - 1]
+      : { time: null }
+
+  const sensorConfigs: SensorConfig[] = SENSOR_CONFIGS.map((config) => ({
+    ...config,
+    value: realTimeData[config.dataKey as keyof typeof realTimeData] as
+      | number
+      | null,
+  }))
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen bg-gray-900 p-6 pt-20">
+      <div className="max-w-7xl mx-auto">
+        {/* 헤더 */}
+        <div className="mb-12">
+          <h1 className="text-4xl font-bold text-white mb-3">
+            스마트팜 모니터링 대시보드
+          </h1>
+          <p className="text-gray-400 text-base">
+            실시간 센서 데이터 및 12시간 트렌드
+          </p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* 센서 카드들 - 반응형 그리드 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4 gap-4 sm:gap-6 md:gap-6 lg:gap-8">
+          {sensorConfigs.map((sensor, index) => (
+            <GrafanaCard key={index} {...sensor} chartData={dashboardData} />
+          ))}
+        </div>
+
+        {/* 하단 정보 */}
+        <div className="mt-8 text-center">
+          <p className="text-gray-500 text-sm">
+            마지막 업데이트:{' '}
+            {realTimeData.time
+              ? new Date(realTimeData.time).toLocaleTimeString()
+              : '--'}
+          </p>
+        </div>
+      </div>
     </div>
-  );
+  )
 }
