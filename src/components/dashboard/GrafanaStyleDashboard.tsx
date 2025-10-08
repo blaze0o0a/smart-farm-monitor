@@ -493,9 +493,6 @@ export default function GrafanaStyleDashboard({
 
           {/* 하단 정보 */}
           <footer className="text-xs text-slate-500">
-            구성: N,P,K,Temperature,pH,EC,Humidity · 실시간 업데이트 및 히스토리
-            보기 가능
-            <br />
             마지막 업데이트:{' '}
             {realTimeData.time
               ? new Date(realTimeData.time).toLocaleTimeString()
