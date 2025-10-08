@@ -1,15 +1,6 @@
 import { create } from 'zustand'
 
-interface ChartData {
-  time: string
-  temperature: number
-  humidity: number
-  ec: number
-  ph: number
-  n: number
-  p: number
-  k: number
-}
+import { SensorData } from '@/types/sensor'
 
 interface AppState {
   // UI 상태
@@ -18,14 +9,14 @@ interface AppState {
   error: string | null
 
   // 데이터
-  chartData: ChartData[]
-  tableData: ChartData[]
+  chartData: SensorData[]
+  tableData: SensorData[]
 
   // 액션들
   setActiveTab: (tab: string) => void
-  setChartData: (data: ChartData[]) => void
-  addChartData: (newData: ChartData) => void
-  setTableData: (data: ChartData[]) => void
+  setChartData: (data: SensorData[]) => void
+  addChartData: (newData: SensorData) => void
+  setTableData: (data: SensorData[]) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
   clearError: () => void

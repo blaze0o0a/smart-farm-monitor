@@ -40,8 +40,6 @@ export async function POST(request: NextRequest) {
     // 캘리브레이션 데이터 업데이트
     calibrationData[key] = value
 
-    console.log('캘리브레이션 데이터 업데이트됨:', calibrationData)
-
     return NextResponse.json({
       message: '캘리브레이션 데이터가 성공적으로 업데이트되었습니다.',
       data: calibrationData,

@@ -8,16 +8,24 @@ import { TableDataRow } from '@/types/sensor'
 export default function TablePage() {
   const { tableData, setTableData, isLoading, setLoading, setError } =
     useAppStore()
-  const [startDate, setStartDate] = useState(new Date())
+  const [startDate, setStartDate] = useState(() => {
+    const now = new Date()
+    return new Date(now.getTime() - 12 * 60 * 60 * 1000) // 12시간 전
+  })
+  const [endDate, setEndDate] = useState(new Date())
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
     total: 0,
   })
+  const [sortConfig, setSortConfig] = useState<{
+    key: string
+    direction: 'asc' | 'desc'
+  } | null>(null)
 
   // 테이블 데이터 가져오기
   const fetchTableData = useCallback(
-    async (dateString: string) => {
+    async (startDateString: string, endDateString: string) => {
       try {
         setLoading(true)
         setError(null)
@@ -25,7 +33,10 @@ export default function TablePage() {
         const response = await fetch('/api/table', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date: dateString }),
+          body: JSON.stringify({
+            startDate: startDateString,
+            endDate: endDateString,
+          }),
         })
 
         if (!response.ok) {
@@ -34,7 +45,11 @@ export default function TablePage() {
 
         const data = await response.json()
         setTableData(data)
-        setPagination((prev) => ({ ...prev, total: data.length }))
+        setPagination((prev) => ({
+          ...prev,
+          total: data.length,
+          current: 1, // 데이터가 변경되면 첫 페이지로 리셋
+        }))
       } catch (error) {
         console.error('테이블 데이터 가져오기 실패:', error)
         setError('테이블 데이터를 불러오는데 실패했습니다.')
@@ -46,19 +61,85 @@ export default function TablePage() {
   )
 
   useEffect(() => {
-    const dateString = startDate.toISOString().split('T')[0]
-    fetchTableData(dateString)
-  }, [startDate, fetchTableData])
+    const startDateString = startDate.toISOString()
+    const endDateString = endDate.toISOString()
+    fetchTableData(startDateString, endDateString)
+  }, [startDate, endDate, fetchTableData])
 
-  const onDateChange = (date: moment.Moment | null) => {
+  const onStartDateChange = (date: moment.Moment | null) => {
     if (date) {
       setStartDate(date.toDate())
       setPagination((prev) => ({ ...prev, current: 1 }))
     }
   }
 
+  const onEndDateChange = (date: moment.Moment | null) => {
+    if (date) {
+      setEndDate(date.toDate())
+      setPagination((prev) => ({ ...prev, current: 1 }))
+    }
+  }
+
+  // 12시간 전부터 현재까지 설정
+  const setLast12Hours = () => {
+    const now = new Date()
+    const twelveHoursAgo = new Date(now.getTime() - 12 * 60 * 60 * 1000)
+    setStartDate(twelveHoursAgo)
+    setEndDate(now)
+    setPagination((prev) => ({ ...prev, current: 1 }))
+  }
+
+  // 정렬 함수
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc'
+    if (
+      sortConfig &&
+      sortConfig.key === key &&
+      sortConfig.direction === 'asc'
+    ) {
+      direction = 'desc'
+    }
+    setSortConfig({ key, direction })
+    setPagination((prev) => ({ ...prev, current: 1 })) // 정렬 시 첫 페이지로
+  }
+
+  // 정렬된 데이터 생성
+  const getSortedData = () => {
+    if (!sortConfig) return tableData
+
+    return [...tableData].sort((a, b) => {
+      let aValue = a[sortConfig.key as keyof typeof a]
+      let bValue = b[sortConfig.key as keyof typeof b]
+
+      // 시간 컬럼의 경우 특별 처리
+      if (sortConfig.key === 'time') {
+        // 시간 문자열을 Date 객체로 변환하여 비교
+        const today = new Date().toDateString()
+        aValue = new Date(`${today} ${aValue}`).getTime()
+        bValue = new Date(`${today} ${bValue}`).getTime()
+      }
+
+      if (aValue < bValue) {
+        return sortConfig.direction === 'asc' ? -1 : 1
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'asc' ? 1 : -1
+      }
+      return 0
+    })
+  }
+
   const exportToCSV = () => {
-    const headers = ['시간', '온도(°C)', '습도(%)', 'EC', 'pH', 'N', 'P', 'K']
+    const headers = [
+      'time',
+      'temperature(°C)',
+      'humidity(%)',
+      'ec',
+      'ph',
+      'n',
+      'p',
+      'k',
+    ]
     const csvContent = [
       headers.join(','),
       ...tableData.map((row: TableDataRow) =>
@@ -75,7 +156,9 @@ export default function TablePage() {
       ),
     ].join('\n')
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const blob = new Blob(['\uFEFF' + csvContent], {
+      type: 'text/csv;charset=utf-8;',
+    })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
     link.setAttribute('href', url)
@@ -100,9 +183,14 @@ export default function TablePage() {
     { key: 'k', label: 'K', width: 'w-16' },
   ]
 
+  const sortedData = getSortedData()
   const startIndex = (pagination.current - 1) * pagination.pageSize
   const endIndex = startIndex + pagination.pageSize
-  const currentData = tableData.slice(startIndex, endIndex)
+  const currentData = sortedData.slice(startIndex, endIndex)
+
+  // 페이지네이션 정보 계산
+  const totalPages = Math.ceil(sortedData.length / pagination.pageSize)
+  const hasData = sortedData.length > 0
 
   return (
     <div className="p-4 pt-20">
@@ -112,14 +200,34 @@ export default function TablePage() {
         </h1>
 
         <div className="bg-gray-800 rounded-lg shadow-md p-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
-            <div className="flex items-center space-x-4">
-              <input
-                type="date"
-                value={moment(startDate).format('YYYY-MM-DD')}
-                onChange={(e) => onDateChange(moment(e.target.value))}
-                className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white"
-              />
+          <div className="flex flex-col gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-gray-300 text-sm">시작:</label>
+                  <input
+                    type="datetime-local"
+                    value={moment(startDate).format('YYYY-MM-DDTHH:mm')}
+                    onChange={(e) => onStartDateChange(moment(e.target.value))}
+                    className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-gray-300 text-sm">종료:</label>
+                  <input
+                    type="datetime-local"
+                    value={moment(endDate).format('YYYY-MM-DDTHH:mm')}
+                    onChange={(e) => onEndDateChange(moment(e.target.value))}
+                    className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white"
+                  />
+                </div>
+                <button
+                  onClick={setLast12Hours}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  최근 12시간
+                </button>
+              </div>
               <span className="text-gray-300 font-medium">
                 총 {tableData.length}개 데이터
               </span>
@@ -153,9 +261,50 @@ export default function TablePage() {
                   {columns.map((column) => (
                     <th
                       key={column.key}
-                      className={`px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider ${column.width}`}
+                      className={`px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider ${
+                        column.width
+                      } ${
+                        column.key === 'time'
+                          ? 'cursor-pointer hover:bg-gray-600'
+                          : ''
+                      }`}
+                      onClick={
+                        column.key === 'time'
+                          ? () => handleSort(column.key)
+                          : undefined
+                      }
                     >
-                      {column.label}
+                      <div className="flex items-center gap-1">
+                        <span>{column.label}</span>
+                        {column.key === 'time' && (
+                          <div className="flex items-center ml-1">
+                            <svg
+                              className={`w-3 h-3 ${
+                                sortConfig?.key === column.key &&
+                                sortConfig.direction === 'asc'
+                                  ? 'text-blue-400'
+                                  : 'text-gray-500'
+                              }`}
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                            </svg>
+                            <svg
+                              className={`w-3 h-3 ml-0.5 ${
+                                sortConfig?.key === column.key &&
+                                sortConfig.direction === 'desc'
+                                  ? 'text-blue-400'
+                                  : 'text-gray-500'
+                              }`}
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
                     </th>
                   ))}
                 </tr>
@@ -216,13 +365,13 @@ export default function TablePage() {
           </div>
 
           {/* 페이지네이션 */}
-          {tableData.length > 0 && (
+          {hasData && (
             <div className="flex items-center justify-between mt-6">
               <div className="text-sm text-gray-300">
-                {startIndex + 1}-{Math.min(endIndex, tableData.length)} / 총{' '}
-                {tableData.length}개
+                {startIndex + 1}-{Math.min(endIndex, sortedData.length)} / 총{' '}
+                {sortedData.length}개 데이터
               </div>
-              <div className="flex space-x-2">
+              <div className="flex items-center space-x-2">
                 <button
                   onClick={() =>
                     setPagination((prev) => ({
@@ -231,13 +380,12 @@ export default function TablePage() {
                     }))
                   }
                   disabled={pagination.current === 1}
-                  className="px-3 py-1 border border-gray-600 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 text-gray-200 bg-gray-800"
+                  className="px-3 py-1 border border-gray-600 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 text-gray-200 bg-gray-800 transition-colors"
                 >
                   이전
                 </button>
-                <span className="px-3 py-1 text-sm text-gray-300">
-                  {pagination.current} /{' '}
-                  {Math.ceil(tableData.length / pagination.pageSize)}
+                <span className="px-3 py-1 text-sm text-gray-300 bg-gray-700 rounded">
+                  {pagination.current} / {totalPages}
                 </span>
                 <button
                   onClick={() =>
@@ -246,11 +394,8 @@ export default function TablePage() {
                       current: prev.current + 1,
                     }))
                   }
-                  disabled={
-                    pagination.current >=
-                    Math.ceil(tableData.length / pagination.pageSize)
-                  }
-                  className="px-3 py-1 border border-gray-600 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 text-gray-200 bg-gray-800"
+                  disabled={pagination.current >= totalPages}
+                  className="px-3 py-1 border border-gray-600 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 text-gray-200 bg-gray-800 transition-colors"
                 >
                   다음
                 </button>

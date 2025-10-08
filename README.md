@@ -8,18 +8,20 @@
 
 ### 🎯 주요 기능
 
-- **대시보드**: 7개 센서의 실시간 데이터 및 12시간 트렌드 차트
+- **대시보드**: 7개 센서의 실시간 데이터 및 12시간 트렌드 차트 (Grafana 스타일)
+- **센서 상세보기**: 개별 센서의 상세 차트 및 테이블 데이터
 - **차트**: 선택한 날짜의 상세한 시계열 데이터 시각화
-- **테이블**: 센서 데이터의 페이지네이션된 테이블 뷰
-- **캘리브레이션**: 센서 보정값 설정 (계수/오프셋)
+- **테이블**: 센서 데이터의 페이지네이션된 테이블 뷰 (정렬, CSV 다운로드)
+- **캘리브레이션**: 센서 보정값 설정 (계수/오프셋) - 전문적인 UI
 
 ### 🔧 기술 스택
 
-- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
-- **Charts**: Recharts
+- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
+- **Charts**: Recharts (반응형 차트)
 - **State Management**: Zustand
-- **Icons**: Next.js Image
+- **Icons**: Lucide React
 - **Date**: Moment.js
+- **UI**: 다크 테마, 반응형 디자인
 
 ## 🚀 시작하기
 
@@ -29,11 +31,20 @@
 # 의존성 설치
 npm install
 
-# 개발 서버 실행
+# 개발 서버 실행 (포트 3331)
 npm run dev
+
+# 프로덕션 빌드
+npm run build
+
+# 프로덕션 서버 실행
+npm start
+
+# 샘플 데이터 생성 (선택사항)
+npm run generate-data
 ```
 
-브라우저에서 [http://localhost:3000](http://localhost:3000)을 열어 확인하세요.
+브라우저에서 [http://localhost:3331](http://localhost:3331)을 열어 확인하세요.
 
 ## 📊 센서 데이터 구조
 
@@ -198,24 +209,47 @@ src/
 │   ├── page.tsx               # 대시보드 페이지
 │   ├── chart/page.tsx         # 차트 페이지
 │   ├── table/page.tsx         # 테이블 페이지
-│   └── calibration/page.tsx   # 캘리브레이션 페이지
+│   ├── calibration/page.tsx   # 캘리브레이션 페이지
+│   └── sensor/[sensorType]/page.tsx # 센서 상세 페이지
 ├── components/
-│   ├── dashboard/GrafanaCard.tsx     # 대시보드 카드
-│   └── calibration/CalibrationCard.tsx # 캘리브레이션 카드
+│   ├── AppWrapper.tsx         # 앱 래퍼 (사이드바, 에러 처리)
+│   ├── common/                # 공통 컴포넌트
+│   │   ├── Sidebar.tsx        # 네비게이션 사이드바
+│   │   ├── LoadingSpinner.tsx # 로딩 스피너
+│   │   └── ErrorMessage.tsx   # 에러 메시지
+│   ├── dashboard/
+│   │   └── GrafanaStyleDashboard.tsx # Grafana 스타일 대시보드
+│   ├── sensor/
+│   │   ├── SensorChart.tsx    # 센서 차트 컴포넌트
+│   │   └── SensorTable.tsx    # 센서 테이블 컴포넌트
+│   └── calibration/
+│       └── CalibrationCard.tsx # 캘리브레이션 카드
 ├── lib/
-│   └── db.ts                  # 데이터베이스 연결 설정
-├── types/sensor.ts            # 타입 정의
-├── constants/sensors.ts       # 센서 설정 상수
-├── hooks/useCardHeight.ts     # 공통 훅
-└── stores/useAppStore.ts      # 상태 관리
+│   ├── db.ts                  # 데이터베이스 연결 설정
+│   ├── dataGenerator.ts       # 샘플 데이터 생성
+│   ├── dateUtils.ts           # 날짜 유틸리티
+│   ├── fileDataManager.ts     # 파일 데이터 관리
+│   └── sensorUtils.ts         # 센서 데이터 유틸리티
+├── hooks/
+│   └── useSensorData.ts       # 센서 데이터 커스텀 훅
+├── types/
+│   └── sensor.ts              # 센서 타입 정의
+├── constants/
+│   ├── app.ts                 # 앱 상수
+│   └── sensors.ts             # 센서 설정 상수
+└── stores/
+    └── useAppStore.ts         # Zustand 상태 관리
 ```
 
 ## 🎨 UI/UX 특징
 
-- **다크 테마**: 모든 페이지에 일관된 다크 테마 적용
-- **반응형 디자인**: 모바일, 태블릿, 데스크톱 대응
-- **실시간 업데이트**: 5분마다 자동 데이터 갱신
+- **다크 테마**: 모든 페이지에 일관된 다크 테마 적용 (Slate 색상 팔레트)
+- **반응형 디자인**: 모바일, 태블릿, 데스크톱 완벽 대응
+- **Grafana 스타일**: 전문적인 모니터링 대시보드 UI
+- **실시간 업데이트**: 1분마다 자동 데이터 갱신
 - **직관적 인터페이스**: 센서별 아이콘과 색상 구분
+- **CSV 다운로드**: UTF-8 BOM 지원으로 한글 깨짐 방지
+- **모바일 최적화**: 터치 친화적 인터페이스
 
 ## 🔧 개발 명령어
 
@@ -235,18 +269,71 @@ npm run lint
 
 ## 📝 주요 개선사항
 
-- ✅ TypeScript 타입 안정성
-- ✅ 컴포넌트 최적화 (React.memo, useCallback)
-- ✅ 코드 중복 제거 및 모듈화
-- ✅ 일관된 에러 처리
-- ✅ 반응형 레이아웃 최적화
+### 🏗️ 아키텍처 개선
+
+- ✅ **TypeScript 타입 안정성**: 완전한 타입 정의 및 검증
+- ✅ **컴포넌트 최적화**: React.memo, useCallback, useMemo 적절히 활용
+- ✅ **코드 중복 제거**: 커스텀 훅과 유틸리티 함수로 모듈화
+- ✅ **일관된 에러 처리**: 전역 에러 상태 관리 및 사용자 친화적 메시지
+
+### 🎨 UI/UX 개선
+
+- ✅ **Grafana 스타일 대시보드**: 전문적인 모니터링 인터페이스
+- ✅ **반응형 레이아웃**: 모바일부터 데스크톱까지 완벽 대응
+- ✅ **다크 테마 일관성**: 모든 컴포넌트에 통일된 디자인
+- ✅ **캘리브레이션 UI**: 전문적인 설정 인터페이스
+
+### 🚀 성능 최적화
+
+- ✅ **커스텀 훅 분리**: `useSensorData`로 로직과 UI 분리
+- ✅ **메모이제이션**: 불필요한 리렌더링 방지
+- ✅ **CSV 최적화**: UTF-8 BOM으로 한글 지원
+- ✅ **빌드 최적화**: 프로덕션 빌드 성공 및 최적화
 
 ## 🚀 배포
 
+### 정적 호스팅 (권장)
+
 Vercel, Netlify 등 정적 호스팅 플랫폼에서 쉽게 배포 가능합니다.
+
+```bash
+# 빌드
+npm run build
+
+# 배포 (Vercel 예시)
+npx vercel --prod
+```
+
+### Docker 배포
+
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+EXPOSE 3331
+CMD ["npm", "start"]
+```
+
+## 📋 현재 상태
+
+- ✅ **개발 완료**: 모든 기능 구현 및 테스트 완료
+- ✅ **프로덕션 빌드**: 성공적으로 빌드됨
+- ⏳ **데이터베이스 연결**: 목데이터 사용 중 (실제 DB 연결 대기)
+- ✅ **UI/UX 완성**: 전문적인 모니터링 인터페이스
+
+## 🔄 다음 단계
+
+1. **데이터베이스 연결**: `src/lib/db.ts` 설정 및 API 수정
+2. **실제 센서 데이터**: 하드웨어 센서와 연동
+3. **알림 시스템**: 임계값 초과 시 알림 기능
+4. **사용자 인증**: 로그인/권한 관리 시스템
 
 ---
 
 **개발자**: 스마트팜 모니터링 시스템 개발팀  
-**버전**: 1.0.0  
-**라이선스**: MIT
+**버전**: 2.0.0  
+**라이선스**: MIT  
+**최종 업데이트**: 2024년 12월

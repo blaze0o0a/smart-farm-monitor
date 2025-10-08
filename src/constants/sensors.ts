@@ -1,4 +1,5 @@
 import { SensorConfig, CalibrationItem } from '@/types/sensor'
+import { SENSOR_COLORS } from './app'
 
 export const SENSOR_CONFIGS: Omit<SensorConfig, 'value'>[] = [
   {
@@ -7,7 +8,7 @@ export const SENSOR_CONFIGS: Omit<SensorConfig, 'value'>[] = [
     icon: '/icons/temp_icon.png',
     iconAlt: 'temperature',
     dataKey: 'temperature',
-    color: '#ff7300',
+    color: SENSOR_COLORS.temperature,
   },
   {
     title: 'Humidity',
@@ -15,7 +16,7 @@ export const SENSOR_CONFIGS: Omit<SensorConfig, 'value'>[] = [
     icon: '/icons/humi_icon.png',
     iconAlt: 'humidity',
     dataKey: 'humidity',
-    color: '#0088fe',
+    color: SENSOR_COLORS.humidity,
   },
   {
     title: 'pH',
@@ -23,7 +24,7 @@ export const SENSOR_CONFIGS: Omit<SensorConfig, 'value'>[] = [
     icon: '/icons/ph_icon.png',
     iconAlt: 'ph',
     dataKey: 'ph',
-    color: '#00c49f',
+    color: SENSOR_COLORS.ph,
   },
   {
     title: 'EC',
@@ -31,31 +32,31 @@ export const SENSOR_CONFIGS: Omit<SensorConfig, 'value'>[] = [
     icon: '/icons/ec_icon.png',
     iconAlt: 'ec',
     dataKey: 'ec',
-    color: '#ffbb28',
+    color: SENSOR_COLORS.ec,
   },
   {
-    title: 'Nitrogen',
+    title: 'N',
     unit: 'ppm',
     icon: '/icons/npk_icon.png',
     iconAlt: 'nitrogen',
     dataKey: 'n',
-    color: '#ff6b6b',
+    color: SENSOR_COLORS.n,
   },
   {
-    title: 'Phosphorus',
+    title: 'P',
     unit: 'ppm',
     icon: '/icons/npk_icon.png',
     iconAlt: 'phosphorus',
     dataKey: 'p',
-    color: '#4ecdc4',
+    color: SENSOR_COLORS.p,
   },
   {
-    title: 'Potassium',
+    title: 'K',
     unit: 'ppm',
     icon: '/icons/npk_icon.png',
     iconAlt: 'potassium',
     dataKey: 'k',
-    color: '#45b7d1',
+    color: SENSOR_COLORS.k,
   },
 ]
 

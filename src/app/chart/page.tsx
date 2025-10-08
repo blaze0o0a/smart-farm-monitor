@@ -14,14 +14,17 @@ import moment from 'moment'
 import useAppStore from '@/stores/useAppStore'
 
 export default function ChartPage() {
-  const { chartData, setChartData, isLoading, setLoading, setError } =
-    useAppStore()
+  const { chartData, setChartData, setLoading, setError } = useAppStore()
   const [activeTab, setActiveTab] = useState('Temperature & Humidity')
-  const [startDate, setStartDate] = useState(new Date())
+  const [startDate, setStartDate] = useState(() => {
+    const now = new Date()
+    return new Date(now.getTime() - 12 * 60 * 60 * 1000) // 12시간 전
+  })
+  const [endDate, setEndDate] = useState(new Date())
 
   // 차트 데이터 가져오기
   const fetchChartData = useCallback(
-    async (dateString: string) => {
+    async (startDateString: string, endDateString: string) => {
       try {
         setLoading(true)
         setError(null)
@@ -29,7 +32,10 @@ export default function ChartPage() {
         const response = await fetch('/api/chart', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date: dateString }),
+          body: JSON.stringify({
+            startDate: startDateString,
+            endDate: endDateString,
+          }),
         })
 
         if (!response.ok) {
@@ -49,18 +55,33 @@ export default function ChartPage() {
   )
 
   useEffect(() => {
-    const dateString = startDate.toISOString().split('T')[0]
-    fetchChartData(dateString)
-  }, [startDate, fetchChartData])
+    const startDateString = startDate.toISOString()
+    const endDateString = endDate.toISOString()
+    fetchChartData(startDateString, endDateString)
+  }, [startDate, endDate, fetchChartData])
 
   const handleTabChange = (key: string) => {
     setActiveTab(key)
   }
 
-  const onDateChange = (date: moment.Moment | null) => {
+  const onStartDateChange = (date: moment.Moment | null) => {
     if (date) {
       setStartDate(date.toDate())
     }
+  }
+
+  const onEndDateChange = (date: moment.Moment | null) => {
+    if (date) {
+      setEndDate(date.toDate())
+    }
+  }
+
+  // 12시간 전부터 현재까지 설정
+  const setLast12Hours = () => {
+    const now = new Date()
+    const twelveHoursAgo = new Date(now.getTime() - 12 * 60 * 60 * 1000)
+    setStartDate(twelveHoursAgo)
+    setEndDate(now)
   }
 
   const renderChart = (dataKeys: string[], colors: string[]) => {
@@ -100,8 +121,9 @@ export default function ChartPage() {
                 type="monotone"
                 dataKey={key}
                 stroke={colors[index]}
-                strokeWidth={2}
+                strokeWidth={1.5}
                 dot={false}
+                activeDot={false}
               />
             ))}
           </LineChart>
@@ -139,13 +161,31 @@ export default function ChartPage() {
         </h1>
 
         <div className="bg-gray-800 rounded-lg shadow-md p-6">
-          <div className="flex justify-center mb-6">
-            <input
-              type="date"
-              value={moment(startDate).format('YYYY-MM-DD')}
-              onChange={(e) => onDateChange(moment(e.target.value))}
-              className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white"
-            />
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-6">
+            <div className="flex items-center gap-2">
+              <label className="text-gray-300 text-sm">시작:</label>
+              <input
+                type="datetime-local"
+                value={moment(startDate).format('YYYY-MM-DDTHH:mm')}
+                onChange={(e) => onStartDateChange(moment(e.target.value))}
+                className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-gray-300 text-sm">종료:</label>
+              <input
+                type="datetime-local"
+                value={moment(endDate).format('YYYY-MM-DDTHH:mm')}
+                onChange={(e) => onEndDateChange(moment(e.target.value))}
+                className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white"
+              />
+            </div>
+            <button
+              onClick={setLast12Hours}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              최근 12시간
+            </button>
           </div>
 
           <div className="w-full">

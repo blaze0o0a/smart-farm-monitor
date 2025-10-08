@@ -12,7 +12,7 @@ const ErrorMessage: React.FC<ErrorMessageProps> = ({ message, onClose }) => {
 
   return (
     <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 w-90 max-w-md mx-4">
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 shadow-lg">
+      <div className="bg-red-900/90 border border-red-700 rounded-lg p-4 shadow-xl backdrop-blur-sm">
         <div className="flex items-start">
           <div className="flex-shrink-0">
             <svg
@@ -28,14 +28,14 @@ const ErrorMessage: React.FC<ErrorMessageProps> = ({ message, onClose }) => {
             </svg>
           </div>
           <div className="ml-3 flex-1">
-            <h3 className="text-sm font-medium text-red-800">오류</h3>
-            <p className="mt-1 text-sm text-red-700">{message}</p>
+            <h3 className="text-sm font-medium text-red-300">오류</h3>
+            <p className="mt-1 text-sm text-red-200">{message}</p>
           </div>
           {onClose && (
             <div className="ml-3 flex-shrink-0">
               <button
                 onClick={onClose}
-                className="text-red-400 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 rounded-md"
+                className="text-red-400 hover:text-red-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-slate-900 rounded-md transition-colors"
               >
                 <svg
                   className="h-5 w-5"

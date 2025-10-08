@@ -1,53 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-// 목 테이블 데이터 생성 함수
-function generateTableData(date: string, count: number = 100) {
-  const startDate = new Date(date)
-  const data = []
-
-  for (let i = 0; i < count; i++) {
-    const time = new Date(startDate.getTime() + i * 60000) // 1분 간격
-    data.push({
-      time: time.toISOString().split('T')[1].substring(0, 8), // HH:mm:ss 형식
-      temperature: parseFloat(
-        (25 + Math.sin(i * 0.1) * 5 + Math.random() * 2).toFixed(1)
-      ),
-      humidity: parseFloat(
-        (60 + Math.cos(i * 0.1) * 10 + Math.random() * 3).toFixed(1)
-      ),
-      ec: parseFloat(
-        (1.2 + Math.sin(i * 0.05) * 0.3 + Math.random() * 0.1).toFixed(1)
-      ),
-      ph: parseFloat(
-        (6.5 + Math.sin(i * 0.08) * 0.5 + Math.random() * 0.2).toFixed(1)
-      ),
-      n: parseFloat(
-        (0.5 + Math.sin(i * 0.12) * 0.2 + Math.random() * 0.1).toFixed(1)
-      ),
-      p: parseFloat(
-        (0.3 + Math.cos(i * 0.15) * 0.2 + Math.random() * 0.1).toFixed(1)
-      ),
-      k: parseFloat(
-        (0.4 + Math.sin(i * 0.1) * 0.2 + Math.random() * 0.1).toFixed(1)
-      ),
-    })
-  }
-
-  return data
-}
+import { readDataFromDateRange } from '@/lib/fileDataManager'
+import { DateUtils } from '@/lib/dateUtils'
 
 export async function POST(request: NextRequest) {
   try {
-    const { date } = await request.json()
-    const data = generateTableData(date, 100)
-    return NextResponse.json(data)
+    const { startDate, endDate } = await request.json()
+
+    // 기본값 설정
+    const now = new Date()
+    const twelveHoursAgo = new Date(now.getTime() - 12 * 60 * 60 * 1000)
+
+    const start = startDate || twelveHoursAgo.toISOString()
+    const end = endDate || now.toISOString()
+
+    const data = readDataFromDateRange(start, end)
+
+    if (!data || data.length === 0) {
+      return NextResponse.json(
+        { error: '해당 기간의 데이터 파일이 없습니다.' },
+        { status: 404 }
+      )
+    }
+
+    // 테이블용으로 시간 형식 변경 (UTC 정보 제거)
+    const tableData = data.map((item) => ({
+      ...item,
+      time: DateUtils.formatKoreanTime(item.time, false), // 시간만 표시
+    }))
+
+    return NextResponse.json(tableData)
   } catch (error) {
-    console.error('Table data generation error:', error)
+    console.error('Table data reading error:', error)
     return NextResponse.json(
-      { error: '테이블 데이터 생성에 실패했습니다.' },
+      { error: '테이블 데이터를 읽는데 실패했습니다.' },
       { status: 500 }
     )
   }
 }
-
-
