@@ -12,14 +12,32 @@ import {
 } from 'recharts'
 import moment from 'moment'
 import useAppStore from '@/stores/useAppStore'
-import { MockDataGenerator } from '@/lib/mockData'
+
+// 목업 데이터 - 최근 12시간 (1분 간격, 720개)
+const MOCK_CHART_DATA = Array.from({ length: 720 }, (_, i) => {
+  const now = new Date()
+  const time = new Date(now.getTime() - (720 - i) * 60 * 1000)
+  const hour = time.getHours()
+  const timeFactor = Math.sin(((hour - 6) * Math.PI) / 12) * 0.3 + 0.7
+  
+  return {
+    time: time.toISOString(),
+    temperature: Number((25 + timeFactor * 5 + (Math.random() - 0.5) * 2).toFixed(1)),
+    humidity: Number((65 - timeFactor * 10 + (Math.random() - 0.5) * 3).toFixed(1)),
+    ec: Number((1.8 + (Math.random() - 0.5) * 0.5).toFixed(1)),
+    ph: Number((6.5 + (Math.random() - 0.5) * 0.3).toFixed(1)),
+    n: Number((0.6 + (Math.random() - 0.5) * 0.3).toFixed(1)),
+    p: Number((0.4 + (Math.random() - 0.5) * 0.3).toFixed(1)),
+    k: Number((0.7 + (Math.random() - 0.5) * 0.3).toFixed(1)),
+  }
+})
 
 export default function ChartPage() {
   const { chartData, setChartData, setLoading, setError } = useAppStore()
   const [activeTab, setActiveTab] = useState('Temperature & Humidity')
   const [startDate, setStartDate] = useState(() => {
     const now = new Date()
-    return new Date(now.getTime() - 12 * 60 * 60 * 1000) // 12시간 전
+    return new Date(now.getTime() - 12 * 60 * 60 * 1000)
   })
   const [endDate, setEndDate] = useState(new Date())
 
@@ -30,12 +48,8 @@ export default function ChartPage() {
         setLoading(true)
         setError(null)
 
-        // API 호출 대신 목업 데이터 직접 생성
-        const data = MockDataGenerator.generateChartData(
-          startDateString,
-          endDateString
-        )
-        setChartData(data)
+        // 그냥 목업 데이터 사용
+        setChartData(MOCK_CHART_DATA)
       } catch (error) {
         console.error('차트 데이터 가져오기 실패:', error)
         setError('차트 데이터를 불러오는데 실패했습니다.')
@@ -68,7 +82,6 @@ export default function ChartPage() {
     }
   }
 
-  // 12시간 전부터 현재까지 설정
   const setLast12Hours = () => {
     const now = new Date()
     const twelveHoursAgo = new Date(now.getTime() - 12 * 60 * 60 * 1000)

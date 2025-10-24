@@ -4,14 +4,32 @@ import React, { useState, useEffect, useCallback } from 'react'
 import moment from 'moment'
 import useAppStore from '@/stores/useAppStore'
 import { TableDataRow } from '@/types/sensor'
-import { MockDataGenerator } from '@/lib/mockData'
+
+// 목업 데이터 - 최근 12시간 (1분 간격, 720개)
+const MOCK_TABLE_DATA: TableDataRow[] = Array.from({ length: 720 }, (_, i) => {
+  const now = new Date()
+  const time = new Date(now.getTime() - (720 - i) * 60 * 1000)
+  const hour = time.getHours()
+  const timeFactor = Math.sin(((hour - 6) * Math.PI) / 12) * 0.3 + 0.7
+  
+  return {
+    time: time.toTimeString().split(' ')[0],
+    temperature: Number((25 + timeFactor * 5 + (Math.random() - 0.5) * 2).toFixed(1)),
+    humidity: Number((65 - timeFactor * 10 + (Math.random() - 0.5) * 3).toFixed(1)),
+    ec: Number((1.8 + (Math.random() - 0.5) * 0.5).toFixed(1)),
+    ph: Number((6.5 + (Math.random() - 0.5) * 0.3).toFixed(1)),
+    n: Number((0.6 + (Math.random() - 0.5) * 0.3).toFixed(1)),
+    p: Number((0.4 + (Math.random() - 0.5) * 0.3).toFixed(1)),
+    k: Number((0.7 + (Math.random() - 0.5) * 0.3).toFixed(1)),
+  }
+})
 
 export default function TablePage() {
   const { tableData, setTableData, isLoading, setLoading, setError } =
     useAppStore()
   const [startDate, setStartDate] = useState(() => {
     const now = new Date()
-    return new Date(now.getTime() - 12 * 60 * 60 * 1000) // 12시간 전
+    return new Date(now.getTime() - 12 * 60 * 60 * 1000)
   })
   const [endDate, setEndDate] = useState(new Date())
   const [pagination, setPagination] = useState({
@@ -31,16 +49,12 @@ export default function TablePage() {
         setLoading(true)
         setError(null)
 
-        // API 호출 대신 목업 데이터 직접 생성
-        const data = MockDataGenerator.generateTableData(
-          startDateString,
-          endDateString
-        )
-        setTableData(data)
+        // 그냥 목업 데이터 사용
+        setTableData(MOCK_TABLE_DATA)
         setPagination((prev) => ({
           ...prev,
-          total: data.length,
-          current: 1, // 데이터가 변경되면 첫 페이지로 리셋
+          total: MOCK_TABLE_DATA.length,
+          current: 1,
         }))
       } catch (error) {
         console.error('테이블 데이터 가져오기 실패:', error)
@@ -72,7 +86,6 @@ export default function TablePage() {
     }
   }
 
-  // 12시간 전부터 현재까지 설정
   const setLast12Hours = () => {
     const now = new Date()
     const twelveHoursAgo = new Date(now.getTime() - 12 * 60 * 60 * 1000)
@@ -81,7 +94,6 @@ export default function TablePage() {
     setPagination((prev) => ({ ...prev, current: 1 }))
   }
 
-  // 정렬 함수
   const handleSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc'
     if (
@@ -92,10 +104,9 @@ export default function TablePage() {
       direction = 'desc'
     }
     setSortConfig({ key, direction })
-    setPagination((prev) => ({ ...prev, current: 1 })) // 정렬 시 첫 페이지로
+    setPagination((prev) => ({ ...prev, current: 1 }))
   }
 
-  // 정렬된 데이터 생성
   const getSortedData = () => {
     if (!sortConfig) return tableData
 
@@ -103,9 +114,7 @@ export default function TablePage() {
       let aValue = a[sortConfig.key as keyof typeof a]
       let bValue = b[sortConfig.key as keyof typeof b]
 
-      // 시간 컬럼의 경우 특별 처리
       if (sortConfig.key === 'time') {
-        // 시간 문자열을 Date 객체로 변환하여 비교
         const today = new Date().toDateString()
         aValue = new Date(`${today} ${aValue}`).getTime()
         bValue = new Date(`${today} ${bValue}`).getTime()
@@ -180,7 +189,6 @@ export default function TablePage() {
   const endIndex = startIndex + pagination.pageSize
   const currentData = sortedData.slice(startIndex, endIndex)
 
-  // 페이지네이션 정보 계산
   const totalPages = Math.ceil(sortedData.length / pagination.pageSize)
   const hasData = sortedData.length > 0
 
@@ -356,7 +364,6 @@ export default function TablePage() {
             </table>
           </div>
 
-          {/* 페이지네이션 */}
           {hasData && (
             <div className="flex items-center justify-between mt-6">
               <div className="text-sm text-gray-300">
