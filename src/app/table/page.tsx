@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import moment from 'moment'
 import useAppStore from '@/stores/useAppStore'
 import { TableDataRow } from '@/types/sensor'
+import { MockDataGenerator } from '@/lib/mockData'
 
 export default function TablePage() {
   const { tableData, setTableData, isLoading, setLoading, setError } =
@@ -23,27 +24,18 @@ export default function TablePage() {
     direction: 'asc' | 'desc'
   } | null>(null)
 
-  // 테이블 데이터 가져오기
+  // 테이블 데이터 가져오기 (목업 데이터)
   const fetchTableData = useCallback(
     async (startDateString: string, endDateString: string) => {
       try {
         setLoading(true)
         setError(null)
 
-        const response = await fetch('/api/table', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            startDate: startDateString,
-            endDate: endDateString,
-          }),
-        })
-
-        if (!response.ok) {
-          throw new Error('테이블 데이터를 불러오는데 실패했습니다.')
-        }
-
-        const data = await response.json()
+        // API 호출 대신 목업 데이터 직접 생성
+        const data = MockDataGenerator.generateTableData(
+          startDateString,
+          endDateString
+        )
         setTableData(data)
         setPagination((prev) => ({
           ...prev,

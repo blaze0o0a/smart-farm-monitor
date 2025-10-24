@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 import moment from 'moment'
 import useAppStore from '@/stores/useAppStore'
+import { MockDataGenerator } from '@/lib/mockData'
 
 export default function ChartPage() {
   const { chartData, setChartData, setLoading, setError } = useAppStore()
@@ -22,27 +23,18 @@ export default function ChartPage() {
   })
   const [endDate, setEndDate] = useState(new Date())
 
-  // 차트 데이터 가져오기
+  // 차트 데이터 가져오기 (목업 데이터)
   const fetchChartData = useCallback(
     async (startDateString: string, endDateString: string) => {
       try {
         setLoading(true)
         setError(null)
 
-        const response = await fetch('/api/chart', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            startDate: startDateString,
-            endDate: endDateString,
-          }),
-        })
-
-        if (!response.ok) {
-          throw new Error('차트 데이터를 불러오는데 실패했습니다.')
-        }
-
-        const data = await response.json()
+        // API 호출 대신 목업 데이터 직접 생성
+        const data = MockDataGenerator.generateChartData(
+          startDateString,
+          endDateString
+        )
         setChartData(data)
       } catch (error) {
         console.error('차트 데이터 가져오기 실패:', error)
