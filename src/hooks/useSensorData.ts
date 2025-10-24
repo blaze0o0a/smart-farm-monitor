@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import moment from 'moment'
 import { DateUtils } from '@/lib/dateUtils'
-import { SensorDataUtils, SensorApiUtils } from '@/lib/sensorUtils'
+import { SensorDataUtils } from '@/lib/sensorDataUtils'
+import { useChartData, useTableData } from '@/hooks/useSocketData'
 import {
   ChartDataPoint,
   TableDataRow,
@@ -71,47 +72,46 @@ export function useSensorData(): UseSensorDataReturn {
     )
   }, [sortedData, pagination])
 
-  // 차트 데이터 가져오기
-  const fetchChartData = useCallback(async (dateString: string) => {
-    try {
-      setIsChartLoading(true)
-      setError(null)
+  // 소켓 기반 데이터 hooks
+  const { data: socketChartData, loading: socketChartLoading, error: socketChartError } = useChartData(
+    DateUtils.getKoreanDayRange(startDate.toISOString().split('T')[0]).startDate,
+    DateUtils.getKoreanDayRange(startDate.toISOString().split('T')[0]).endDate
+  )
 
-      const { startDate, endDate } = DateUtils.getKoreanDayRange(dateString)
-      const data = await SensorApiUtils.fetchChartData(startDate, endDate)
-      setChartData(data)
-    } catch (error) {
-      console.error('차트 데이터 가져오기 실패:', error)
-      setError('차트 데이터를 불러오는데 실패했습니다.')
-    } finally {
-      setIsChartLoading(false)
-    }
-  }, [])
+  const { data: socketTableData, loading: socketTableLoading, error: socketTableError } = useTableData(
+    DateUtils.getKoreanDayRange(startDate.toISOString().split('T')[0]).startDate,
+    DateUtils.getKoreanDayRange(startDate.toISOString().split('T')[0]).endDate
+  )
 
-  // 테이블 데이터 가져오기
-  const fetchTableData = useCallback(async (dateString: string) => {
-    try {
-      setIsTableLoading(true)
-      setError(null)
-
-      const { startDate, endDate } = DateUtils.getKoreanDayRange(dateString)
-      const data = await SensorApiUtils.fetchTableData(startDate, endDate)
-      setTableData(data)
-      setPagination((prev) => ({ ...prev, total: data.length }))
-    } catch (error) {
-      console.error('테이블 데이터 가져오기 실패:', error)
-      setError('테이블 데이터를 불러오는데 실패했습니다.')
-    } finally {
-      setIsTableLoading(false)
-    }
-  }, [])
-
-  // 날짜 변경 시 데이터 새로고침
+  // 소켓 데이터를 로컬 상태에 동기화
   useEffect(() => {
-    const dateString = startDate.toISOString().split('T')[0]
-    fetchChartData(dateString)
-    fetchTableData(dateString)
-  }, [startDate, fetchChartData, fetchTableData])
+    if (socketChartData) {
+      setChartData(socketChartData)
+    }
+  }, [socketChartData])
+
+  useEffect(() => {
+    if (socketTableData) {
+      setTableData(socketTableData)
+      setPagination((prev) => ({ ...prev, total: socketTableData.length }))
+    }
+  }, [socketTableData])
+
+  useEffect(() => {
+    setIsChartLoading(socketChartLoading)
+  }, [socketChartLoading])
+
+  useEffect(() => {
+    setIsTableLoading(socketTableLoading)
+  }, [socketTableLoading])
+
+  useEffect(() => {
+    if (socketChartError || socketTableError) {
+      setError(socketChartError || socketTableError || '데이터를 불러오는데 실패했습니다.')
+    }
+  }, [socketChartError, socketTableError])
+
+  // 날짜 변경 시 자동으로 소켓 데이터가 업데이트됨
 
   // 날짜 변경 핸들러
   const onDateChange = useCallback((date: moment.Moment | null) => {

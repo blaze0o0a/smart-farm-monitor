@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 import moment from 'moment'
 import useAppStore from '@/stores/useAppStore'
+import { useChartData } from '@/hooks/useSocketData'
 
 export default function ChartPage() {
   const { chartData, setChartData, setLoading, setError } = useAppStore()
@@ -22,43 +23,30 @@ export default function ChartPage() {
   })
   const [endDate, setEndDate] = useState(new Date())
 
-  // 차트 데이터 가져오기
-  const fetchChartData = useCallback(
-    async (startDateString: string, endDateString: string) => {
-      try {
-        setLoading(true)
-        setError(null)
-
-        const response = await fetch('/api/chart', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            startDate: startDateString,
-            endDate: endDateString,
-          }),
-        })
-
-        if (!response.ok) {
-          throw new Error('차트 데이터를 불러오는데 실패했습니다.')
-        }
-
-        const data = await response.json()
-        setChartData(data)
-      } catch (error) {
-        console.error('차트 데이터 가져오기 실패:', error)
-        setError('차트 데이터를 불러오는데 실패했습니다.')
-      } finally {
-        setLoading(false)
-      }
-    },
-    [setLoading, setError, setChartData]
+  // 소켓 기반 차트 데이터
+  const { data: socketChartData, loading: socketLoading, error: socketError } = useChartData(
+    startDate.toISOString(),
+    endDate.toISOString()
   )
 
+  // 소켓 데이터를 스토어에 동기화
   useEffect(() => {
-    const startDateString = startDate.toISOString()
-    const endDateString = endDate.toISOString()
-    fetchChartData(startDateString, endDateString)
-  }, [startDate, endDate, fetchChartData])
+    if (socketChartData) {
+      setChartData(socketChartData)
+    }
+  }, [socketChartData, setChartData])
+
+  useEffect(() => {
+    if (socketError) {
+      setError(socketError)
+    }
+  }, [socketError, setError])
+
+  useEffect(() => {
+    setLoading(socketLoading)
+  }, [socketLoading, setLoading])
+
+  // 날짜 변경 시 자동으로 소켓 데이터가 업데이트됨
 
   const handleTabChange = (key: string) => {
     setActiveTab(key)

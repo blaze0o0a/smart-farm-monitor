@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import moment from 'moment'
 import useAppStore from '@/stores/useAppStore'
 import { TableDataRow } from '@/types/sensor'
+import { useTableData } from '@/hooks/useSocketData'
 
 export default function TablePage() {
   const { tableData, setTableData, isLoading, setLoading, setError } =
@@ -23,48 +24,35 @@ export default function TablePage() {
     direction: 'asc' | 'desc'
   } | null>(null)
 
-  // 테이블 데이터 가져오기
-  const fetchTableData = useCallback(
-    async (startDateString: string, endDateString: string) => {
-      try {
-        setLoading(true)
-        setError(null)
-
-        const response = await fetch('/api/table', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            startDate: startDateString,
-            endDate: endDateString,
-          }),
-        })
-
-        if (!response.ok) {
-          throw new Error('테이블 데이터를 불러오는데 실패했습니다.')
-        }
-
-        const data = await response.json()
-        setTableData(data)
-        setPagination((prev) => ({
-          ...prev,
-          total: data.length,
-          current: 1, // 데이터가 변경되면 첫 페이지로 리셋
-        }))
-      } catch (error) {
-        console.error('테이블 데이터 가져오기 실패:', error)
-        setError('테이블 데이터를 불러오는데 실패했습니다.')
-      } finally {
-        setLoading(false)
-      }
-    },
-    [setLoading, setError, setTableData, setPagination]
+  // 소켓 기반 테이블 데이터
+  const { data: socketTableData, loading: socketLoading, error: socketError } = useTableData(
+    startDate.toISOString(),
+    endDate.toISOString()
   )
 
+  // 소켓 데이터를 스토어에 동기화
   useEffect(() => {
-    const startDateString = startDate.toISOString()
-    const endDateString = endDate.toISOString()
-    fetchTableData(startDateString, endDateString)
-  }, [startDate, endDate, fetchTableData])
+    if (socketTableData) {
+      setTableData(socketTableData)
+      setPagination((prev) => ({
+        ...prev,
+        total: socketTableData.length,
+        current: 1,
+      }))
+    }
+  }, [socketTableData, setTableData, setPagination])
+
+  useEffect(() => {
+    if (socketError) {
+      setError(socketError)
+    }
+  }, [socketError, setError])
+
+  useEffect(() => {
+    setLoading(socketLoading)
+  }, [socketLoading, setLoading])
+
+  // 날짜 변경 시 자동으로 소켓 데이터가 업데이트됨
 
   const onStartDateChange = (date: moment.Moment | null) => {
     if (date) {

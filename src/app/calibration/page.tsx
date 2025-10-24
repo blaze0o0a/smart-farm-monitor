@@ -5,6 +5,7 @@ import useAppStore from '@/stores/useAppStore'
 import CalibrationCard from '@/components/calibration/CalibrationCard'
 import { CalibrationData } from '@/types/sensor'
 import { CALIBRATION_ITEMS } from '@/constants/sensors'
+import { useCalibrationData } from '@/hooks/useSocketData'
 
 export default function CalibrationPage() {
   const { setLoading, setError } = useAppStore()
@@ -13,47 +14,35 @@ export default function CalibrationPage() {
   const [inputValue, setInputValue] = useState<string>('')
   const [selectedItem, setSelectedItem] = useState<string>('')
 
-  // 캘리브레이션 데이터 가져오기
-  const fetchCalibrationData = useCallback(async () => {
-    try {
-      setLoading(true)
-      const response = await fetch('/api/calibration')
+  // 소켓 기반 캘리브레이션 데이터
+  const { data: socketCalibrationData, loading: socketLoading, error: socketError, updateCalibration: socketUpdateCalibration } = useCalibrationData()
 
-      if (!response.ok) {
-        throw new Error('캘리브레이션 데이터를 불러오는데 실패했습니다.')
-      }
-
-      const data = await response.json()
-      setCalibrationData(data)
-    } catch (error) {
-      console.error('캘리브레이션 데이터 가져오기 실패:', error)
-      setError('캘리브레이션 데이터를 불러오는데 실패했습니다.')
-    } finally {
-      setLoading(false)
+  // 소켓 데이터를 로컬 상태에 동기화
+  useEffect(() => {
+    if (socketCalibrationData) {
+      setCalibrationData(socketCalibrationData)
     }
-  }, [setLoading, setError])
+  }, [socketCalibrationData])
 
   useEffect(() => {
-    fetchCalibrationData()
-  }, [fetchCalibrationData])
+    if (socketError) {
+      setError(socketError)
+    }
+  }, [socketError, setError])
+
+  useEffect(() => {
+    setLoading(socketLoading)
+  }, [socketLoading, setLoading])
+
+  // 소켓에서 자동으로 데이터를 가져옴
 
   const handleCalibration = async (key: string, value: number) => {
     try {
       setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/calibration', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, value }),
-      })
-
-      if (!response.ok) {
-        throw new Error('캘리브레이션 데이터 저장에 실패했습니다.')
-      }
-
-      const result = await response.json()
-      setCalibrationData(result.data)
+      // 소켓을 통해 캘리브레이션 업데이트
+      socketUpdateCalibration(key, value)
       alert(`${key} 캘리브레이션이 완료되었습니다.`)
       setModalVisible(false)
       setInputValue('')

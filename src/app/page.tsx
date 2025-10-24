@@ -1,37 +1,23 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useEffect } from 'react'
 import GrafanaStyleDashboard from '@/components/dashboard/GrafanaStyleDashboard'
-import { ChartDataPoint } from '@/types/sensor'
 import { useSidebar } from '@/components/AppWrapper'
-import { REFRESH_INTERVALS } from '@/constants/app'
+import { useDashboardData } from '@/hooks/useSocketData'
 
 export default function Dashboard() {
-  const [dashboardData, setDashboardData] = useState<ChartDataPoint[]>([])
   const { isSidebarOpen } = useSidebar()
+  const { data: dashboardData, loading, error, refetch } = useDashboardData()
 
-  // 12시간 대시보드 데이터 가져오기
-  const fetchDashboardData = useCallback(async () => {
-    try {
-      const response = await fetch('/api/dashboard')
-      if (response.ok) {
-        const data = await response.json()
-        setDashboardData(data)
-      }
-    } catch (error) {
-      console.error('대시보드 데이터 가져오기 실패:', error)
-    }
-  }, [])
-
+  // 1분마다 데이터 갱신 (Grafana 스타일에 맞춰)
   useEffect(() => {
-    fetchDashboardData()
-    // 1분마다 데이터 갱신 (Grafana 스타일에 맞춰)
-    const interval = setInterval(
-      fetchDashboardData,
-      REFRESH_INTERVALS.DASHBOARD
-    )
+    const interval = setInterval(refetch, 60000) // 1분마다
     return () => clearInterval(interval)
-  }, [fetchDashboardData])
+  }, [refetch])
+
+  if (error) {
+    console.error('대시보드 데이터 오류:', error)
+  }
 
   return (
     <GrafanaStyleDashboard
