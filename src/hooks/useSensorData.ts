@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import moment from 'moment'
 import { DateUtils } from '@/lib/dateUtils'
-import { SensorDataUtils, SensorApiUtils } from '@/lib/sensorUtils'
+import { SensorDataUtils } from '@/lib/sensorUtils'
+import { MockDataGenerator } from '@/lib/mockData'
 import {
   ChartDataPoint,
   TableDataRow,
@@ -71,14 +72,15 @@ export function useSensorData(): UseSensorDataReturn {
     )
   }, [sortedData, pagination])
 
-  // 차트 데이터 가져오기
+  // 차트 데이터 가져오기 (목업 데이터)
   const fetchChartData = useCallback(async (dateString: string) => {
     try {
       setIsChartLoading(true)
       setError(null)
 
       const { startDate, endDate } = DateUtils.getKoreanDayRange(dateString)
-      const data = await SensorApiUtils.fetchChartData(startDate, endDate)
+      // API 호출 대신 목업 데이터 직접 생성
+      const data = MockDataGenerator.generateChartData(startDate, endDate)
       setChartData(data)
     } catch (error) {
       console.error('차트 데이터 가져오기 실패:', error)
@@ -88,14 +90,15 @@ export function useSensorData(): UseSensorDataReturn {
     }
   }, [])
 
-  // 테이블 데이터 가져오기
+  // 테이블 데이터 가져오기 (목업 데이터)
   const fetchTableData = useCallback(async (dateString: string) => {
     try {
       setIsTableLoading(true)
       setError(null)
 
       const { startDate, endDate } = DateUtils.getKoreanDayRange(dateString)
-      const data = await SensorApiUtils.fetchTableData(startDate, endDate)
+      // API 호출 대신 목업 데이터 직접 생성
+      const data = MockDataGenerator.generateTableData(startDate, endDate)
       setTableData(data)
       setPagination((prev) => ({ ...prev, total: data.length }))
     } catch (error) {
