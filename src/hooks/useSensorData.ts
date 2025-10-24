@@ -17,11 +17,15 @@ const generateMockChartData = (): ChartDataPoint[] => {
     const time = new Date(now.getTime() - (1440 - i) * 60 * 1000)
     const hour = time.getHours()
     const timeFactor = Math.sin(((hour - 6) * Math.PI) / 12) * 0.3 + 0.7
-    
+
     return {
       time: time.toISOString(),
-      temperature: Number((25 + timeFactor * 5 + (Math.random() - 0.5) * 2).toFixed(1)),
-      humidity: Number((65 - timeFactor * 10 + (Math.random() - 0.5) * 3).toFixed(1)),
+      temperature: Number(
+        (25 + timeFactor * 5 + (Math.random() - 0.5) * 2).toFixed(1)
+      ),
+      humidity: Number(
+        (65 - timeFactor * 10 + (Math.random() - 0.5) * 3).toFixed(1)
+      ),
       ec: Number((1.8 + (Math.random() - 0.5) * 0.5).toFixed(1)),
       ph: Number((6.5 + (Math.random() - 0.5) * 0.3).toFixed(1)),
       n: Number((0.6 + (Math.random() - 0.5) * 0.3).toFixed(1)),
@@ -37,11 +41,15 @@ const generateMockTableData = (): TableDataRow[] => {
     const time = new Date(now.getTime() - (1440 - i) * 60 * 1000)
     const hour = time.getHours()
     const timeFactor = Math.sin(((hour - 6) * Math.PI) / 12) * 0.3 + 0.7
-    
+
     return {
       time: time.toTimeString().split(' ')[0],
-      temperature: Number((25 + timeFactor * 5 + (Math.random() - 0.5) * 2).toFixed(1)),
-      humidity: Number((65 - timeFactor * 10 + (Math.random() - 0.5) * 3).toFixed(1)),
+      temperature: Number(
+        (25 + timeFactor * 5 + (Math.random() - 0.5) * 2).toFixed(1)
+      ),
+      humidity: Number(
+        (65 - timeFactor * 10 + (Math.random() - 0.5) * 3).toFixed(1)
+      ),
       ec: Number((1.8 + (Math.random() - 0.5) * 0.5).toFixed(1)),
       ph: Number((6.5 + (Math.random() - 0.5) * 0.3).toFixed(1)),
       n: Number((0.6 + (Math.random() - 0.5) * 0.3).toFixed(1)),
