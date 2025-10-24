@@ -1,5 +1,6 @@
 import { TableDataRow, SortConfig, ChartDataPoint } from '@/types/sensor'
 import { CSV_CONFIG } from '@/constants/app'
+import { MockDataGenerator } from '@/lib/mockData'
 
 /**
  * 센서 데이터 정렬 유틸리티
@@ -86,46 +87,40 @@ export class SensorDataUtils {
 }
 
 /**
- * 센서 데이터 API 호출 유틸리티
+ * 센서 데이터 API 호출 유틸리티 (목업 데이터 사용)
  */
 export class SensorApiUtils {
   /**
-   * 차트 데이터를 가져옵니다
+   * 차트 데이터를 가져옵니다 (목업 데이터)
    */
   static async fetchChartData(
     startDate: string,
     endDate: string
   ): Promise<ChartDataPoint[]> {
-    const response = await fetch('/api/chart', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ startDate, endDate }),
+    // API 호출 대신 목업 데이터 생성
+    return new Promise((resolve) => {
+      // 비동기 시뮬레이션을 위한 약간의 지연
+      setTimeout(() => {
+        const mockData = MockDataGenerator.generateChartData(startDate, endDate)
+        resolve(mockData)
+      }, 100)
     })
-
-    if (!response.ok) {
-      throw new Error('차트 데이터를 불러오는데 실패했습니다.')
-    }
-
-    return response.json()
   }
 
   /**
-   * 테이블 데이터를 가져옵니다
+   * 테이블 데이터를 가져옵니다 (목업 데이터)
    */
   static async fetchTableData(
     startDate: string,
     endDate: string
   ): Promise<TableDataRow[]> {
-    const response = await fetch('/api/table', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ startDate, endDate }),
+    // API 호출 대신 목업 데이터 생성
+    return new Promise((resolve) => {
+      // 비동기 시뮬레이션을 위한 약간의 지연
+      setTimeout(() => {
+        const mockData = MockDataGenerator.generateTableData(startDate, endDate)
+        resolve(mockData)
+      }, 100)
     })
-
-    if (!response.ok) {
-      throw new Error('테이블 데이터를 불러오는데 실패했습니다.')
-    }
-
-    return response.json()
   }
 }

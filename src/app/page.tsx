@@ -5,19 +5,18 @@ import GrafanaStyleDashboard from '@/components/dashboard/GrafanaStyleDashboard'
 import { ChartDataPoint } from '@/types/sensor'
 import { useSidebar } from '@/components/AppWrapper'
 import { REFRESH_INTERVALS } from '@/constants/app'
+import { MockDataGenerator } from '@/lib/mockData'
 
 export default function Dashboard() {
   const [dashboardData, setDashboardData] = useState<ChartDataPoint[]>([])
   const { isSidebarOpen } = useSidebar()
 
-  // 12시간 대시보드 데이터 가져오기
+  // 12시간 대시보드 데이터 가져오기 (목업 데이터)
   const fetchDashboardData = useCallback(async () => {
     try {
-      const response = await fetch('/api/dashboard')
-      if (response.ok) {
-        const data = await response.json()
-        setDashboardData(data)
-      }
+      // API 호출 대신 목업 데이터 직접 생성
+      const data = MockDataGenerator.generateDashboardData()
+      setDashboardData(data)
     } catch (error) {
       console.error('대시보드 데이터 가져오기 실패:', error)
     }
