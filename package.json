@@ -7,12 +7,16 @@
     "build": "next build",
     "start": "NODE_ENV=production node server.js",
     "lint": "eslint",
-    "generate-data": "node data/generate-sensor-data.js"
+    "generate-data": "node data/generate-sensor-data.js",
+    "setup": "node scripts/setup-check.js",
+    "check": "node scripts/setup-check.js",
+    "db:test": "node -e \"require('./scripts/setup-check.js').main().then(() => process.exit(0)).catch(() => process.exit(1))\""
   },
   "dependencies": {
     "@types/react-datepicker": "^7.0.0",
     "lucide-react": "^0.545.0",
     "moment": "^2.30.1",
+    "mysql2": "^3.15.3",
     "next": "15.5.4",
     "react": "19.1.0",
     "react-datepicker": "^8.7.0",
@@ -28,6 +32,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^16.6.1",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
     "tailwindcss": "^4",

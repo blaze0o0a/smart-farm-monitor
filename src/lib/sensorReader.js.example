@@ -1,0 +1,355 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+/**
+ * 🌱 Smart Farm Sensor Reader Template
+ * 
+ * 이 파일을 복사해서 sensorReader.js로 이름을 변경하고 실제 센서에 맞게 수정하세요.
+ * cp src/lib/sensorReader.js.example src/lib/sensorReader.js
+ * 
+ * 지원하는 센서 연결 방식:
+ * 1. 시리얼 포트 (Serial Port)
+ * 2. HTTP API
+ * 3. MQTT
+ * 4. Modbus RTU/TCP
+ */
+
+/**
+ * 실제 센서 리더 클래스
+ */
+class RealSensorReader {
+  constructor(config = {}) {
+    this.config = {
+      // 연결 방식: 'serial', 'http', 'mqtt', 'modbus'
+      type: config.type || process.env.SENSOR_TYPE || 'serial',
+      
+      // 시리얼 포트 설정
+      port: config.port || process.env.SENSOR_PORT || '/dev/ttyUSB0',
+      baudRate: parseInt(config.baudRate || process.env.SENSOR_BAUDRATE || '9600'),
+      
+      // HTTP API 설정
+      apiUrl: config.apiUrl || process.env.SENSOR_API_URL,
+      apiKey: config.apiKey || process.env.SENSOR_API_KEY,
+      
+      // MQTT 설정
+      mqttBroker: config.mqttBroker || process.env.MQTT_BROKER,
+      mqttTopic: config.mqttTopic || process.env.MQTT_TOPIC || 'smart_farm/sensors',
+      
+      // 데이터 수집 간격 (밀리초)
+      interval: parseInt(config.interval || process.env.SENSOR_INTERVAL || '60000'),
+    }
+
+    this.connection = null
+    this.isConnected = false
+    this.onDataCallback = null
+    this.onErrorCallback = null
+    this.reconnectAttempts = 0
+    this.maxReconnectAttempts = 5
+    this.reconnectDelay = 5000 // 5초
+
+    console.log('🔧 센서 리더 초기화:', this.config.type)
+  }
+
+  /**
+   * 센서 연결 시작
+   */
+  async start() {
+    try {
+      switch (this.config.type) {
+        case 'serial':
+          await this.startSerialConnection()
+          break
+        case 'http':
+          await this.startHttpPolling()
+          break
+        case 'mqtt':
+          await this.startMqttConnection()
+          break
+        case 'modbus':
+          await this.startModbusConnection()
+          break
+        default:
+          throw new Error(`지원하지 않는 센서 타입: ${this.config.type}`)
+      }
+      
+      console.log('✅ 센서 연결 성공')
+      this.isConnected = true
+      this.reconnectAttempts = 0
+    } catch (error) {
+      console.error('❌ 센서 연결 실패:', error.message)
+      this.handleConnectionError(error)
+    }
+  }
+
+  /**
+   * 시리얼 포트 연결
+   */
+  async startSerialConnection() {
+    const { SerialPort } = require('serialport')
+    const { ReadlineParser } = require('@serialport/parser-readline')
+
+    this.connection = new SerialPort({
+      path: this.config.port,
+      baudRate: this.config.baudRate,
+    })
+
+    const parser = this.connection.pipe(new ReadlineParser({ delimiter: '\n' }))
+
+    this.connection.on('open', () => {
+      console.log(`🔌 시리얼 포트 연결됨: ${this.config.port}`)
+    })
+
+    parser.on('data', (rawData) => {
+      try {
+        const sensorData = this.parseSerialData(rawData.toString().trim())
+        if (sensorData && this.onDataCallback) {
+          this.onDataCallback(sensorData)
+        }
+      } catch (error) {
+        console.error('시리얼 데이터 파싱 오류:', error)
+      }
+    })
+
+    this.connection.on('error', (error) => {
+      console.error('시리얼 포트 오류:', error)
+      this.handleConnectionError(error)
+    })
+  }
+
+  /**
+   * HTTP API 폴링
+   */
+  async startHttpPolling() {
+    const pollData = async () => {
+      if (!this.isConnected) return
+
+      try {
+        const response = await fetch(this.config.apiUrl, {
+          headers: {
+            'Authorization': `Bearer ${this.config.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+
+        const rawData = await response.json()
+        const sensorData = this.parseHttpData(rawData)
+        
+        if (sensorData && this.onDataCallback) {
+          this.onDataCallback(sensorData)
+        }
+      } catch (error) {
+        console.error('HTTP API 오류:', error)
+        this.handleConnectionError(error)
+      }
+    }
+
+    // 주기적으로 데이터 폴링
+    this.pollInterval = setInterval(pollData, this.config.interval)
+    console.log(`🌐 HTTP API 폴링 시작: ${this.config.apiUrl}`)
+  }
+
+  /**
+   * MQTT 연결
+   */
+  async startMqttConnection() {
+    const mqtt = require('mqtt')
+
+    this.connection = mqtt.connect(this.config.mqttBroker, {
+      username: process.env.MQTT_USERNAME,
+      password: process.env.MQTT_PASSWORD,
+    })
+
+    this.connection.on('connect', () => {
+      console.log(`📡 MQTT 브로커 연결됨: ${this.config.mqttBroker}`)
+      this.connection.subscribe(this.config.mqttTopic, (error) => {
+        if (error) {
+          console.error('MQTT 구독 오류:', error)
+        } else {
+          console.log(`📡 MQTT 토픽 구독: ${this.config.mqttTopic}`)
+        }
+      })
+    })
+
+    this.connection.on('message', (topic, message) => {
+      try {
+        const rawData = JSON.parse(message.toString())
+        const sensorData = this.parseMqttData(rawData)
+        
+        if (sensorData && this.onDataCallback) {
+          this.onDataCallback(sensorData)
+        }
+      } catch (error) {
+        console.error('MQTT 데이터 파싱 오류:', error)
+      }
+    })
+
+    this.connection.on('error', (error) => {
+      console.error('MQTT 연결 오류:', error)
+      this.handleConnectionError(error)
+    })
+  }
+
+  /**
+   * Modbus 연결 (예시)
+   */
+  async startModbusConnection() {
+    // Modbus RTU/TCP 연결 로직
+    // const ModbusRTU = require('modbus-serial')
+    // 실제 Modbus 센서에 맞게 구현
+    throw new Error('Modbus 연결은 실제 센서에 맞게 구현해야 합니다.')
+  }
+
+  /**
+   * 시리얼 데이터 파싱
+   * 실제 센서 데이터 형식에 맞게 수정하세요.
+   */
+  parseSerialData(rawData) {
+    try {
+      // 예시: "TEMP:25.5,HUMI:60.2,EC:1.2,PH:6.8,N:120,P:80,K:200"
+      const values = {}
+      const pairs = rawData.split(',')
+      
+      pairs.forEach(pair => {
+        const [key, value] = pair.split(':')
+        if (key && value) {
+          values[key.toLowerCase()] = parseFloat(value)
+        }
+      })
+
+      return {
+        time: new Date().toISOString(),
+        temperature: values.temp || values.temperature || 0,
+        humidity: values.humi || values.humidity || 0,
+        ec: values.ec || 0,
+        ph: values.ph || 0,
+        n: values.n || values.nitrogen || 0,
+        p: values.p || values.phosphorus || 0,
+        k: values.k || values.potassium || 0,
+      }
+    } catch (error) {
+      console.error('시리얼 데이터 파싱 오류:', error)
+      return null
+    }
+  }
+
+  /**
+   * HTTP API 데이터 파싱
+   */
+  parseHttpData(rawData) {
+    try {
+      // API 응답 형식에 맞게 수정
+      return {
+        time: rawData.timestamp || new Date().toISOString(),
+        temperature: rawData.temperature || 0,
+        humidity: rawData.humidity || 0,
+        ec: rawData.ec || rawData.conductivity || 0,
+        ph: rawData.ph || rawData.pH || 0,
+        n: rawData.nitrogen || rawData.n || 0,
+        p: rawData.phosphorus || rawData.p || 0,
+        k: rawData.potassium || rawData.k || 0,
+      }
+    } catch (error) {
+      console.error('HTTP 데이터 파싱 오류:', error)
+      return null
+    }
+  }
+
+  /**
+   * MQTT 데이터 파싱
+   */
+  parseMqttData(rawData) {
+    try {
+      // MQTT 메시지 형식에 맞게 수정
+      return {
+        time: rawData.timestamp || new Date().toISOString(),
+        temperature: rawData.temp || rawData.temperature || 0,
+        humidity: rawData.humi || rawData.humidity || 0,
+        ec: rawData.ec || 0,
+        ph: rawData.ph || 0,
+        n: rawData.n || 0,
+        p: rawData.p || 0,
+        k: rawData.k || 0,
+      }
+    } catch (error) {
+      console.error('MQTT 데이터 파싱 오류:', error)
+      return null
+    }
+  }
+
+  /**
+   * 연결 오류 처리 및 재연결
+   */
+  handleConnectionError(error) {
+    this.isConnected = false
+    
+    if (this.onErrorCallback) {
+      this.onErrorCallback(error)
+    }
+
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      this.reconnectAttempts++
+      console.log(`🔄 센서 재연결 시도 ${this.reconnectAttempts}/${this.maxReconnectAttempts}`)
+      
+      setTimeout(() => {
+        this.start()
+      }, this.reconnectDelay)
+    } else {
+      console.error('❌ 센서 재연결 시도 횟수 초과. 시뮬레이터 모드로 전환합니다.')
+    }
+  }
+
+  /**
+   * 데이터 수신 콜백 설정
+   */
+  onData(callback) {
+    this.onDataCallback = callback
+  }
+
+  /**
+   * 오류 콜백 설정
+   */
+  onError(callback) {
+    this.onErrorCallback = callback
+  }
+
+  /**
+   * 연결 상태 확인
+   */
+  getConnectionStatus() {
+    return {
+      connected: this.isConnected,
+      type: this.config.type,
+      config: this.config,
+      reconnectAttempts: this.reconnectAttempts,
+    }
+  }
+
+  /**
+   * 센서 연결 종료
+   */
+  async stop() {
+    this.isConnected = false
+
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval)
+    }
+
+    if (this.connection) {
+      try {
+        if (this.config.type === 'serial') {
+          this.connection.close()
+        } else if (this.config.type === 'mqtt') {
+          this.connection.end()
+        }
+      } catch (error) {
+        console.error('센서 연결 종료 오류:', error)
+      }
+    }
+
+    console.log('🔌 센서 연결 종료됨')
+  }
+}
+
+module.exports = { RealSensorReader }

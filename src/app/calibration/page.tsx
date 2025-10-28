@@ -1,12 +1,23 @@
+/**
+ * @fileoverview 캘리브레이션 페이지 컴포넌트
+ * @description 센서 보정값 설정 및 관리 페이지
+ * @module app/calibration/page
+ */
+
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import useAppStore from '@/stores/useAppStore'
 import CalibrationCard from '@/components/calibration/CalibrationCard'
 import { CalibrationData } from '@/types/sensor'
 import { CALIBRATION_ITEMS } from '@/constants/sensors'
 import { useCalibrationData } from '@/hooks/useSocketData'
 
+/**
+ * 캘리브레이션 페이지 컴포넌트
+ * @description 센서 보정값(계수, 오프셋)을 설정하고 관리하는 페이지
+ * @returns {JSX.Element} 캘리브레이션 설정 UI
+ */
 export default function CalibrationPage() {
   const { setLoading, setError } = useAppStore()
   const [calibrationData, setCalibrationData] = useState<CalibrationData>({})
@@ -15,7 +26,12 @@ export default function CalibrationPage() {
   const [selectedItem, setSelectedItem] = useState<string>('')
 
   // 소켓 기반 캘리브레이션 데이터
-  const { data: socketCalibrationData, loading: socketLoading, error: socketError, updateCalibration: socketUpdateCalibration } = useCalibrationData()
+  const {
+    data: socketCalibrationData,
+    loading: socketLoading,
+    error: socketError,
+    updateCalibration: socketUpdateCalibration,
+  } = useCalibrationData()
 
   // 소켓 데이터를 로컬 상태에 동기화
   useEffect(() => {

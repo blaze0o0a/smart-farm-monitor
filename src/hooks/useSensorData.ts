@@ -73,13 +73,23 @@ export function useSensorData(): UseSensorDataReturn {
   }, [sortedData, pagination])
 
   // 소켓 기반 데이터 hooks
-  const { data: socketChartData, loading: socketChartLoading, error: socketChartError } = useChartData(
-    DateUtils.getKoreanDayRange(startDate.toISOString().split('T')[0]).startDate,
+  const {
+    data: socketChartData,
+    loading: socketChartLoading,
+    error: socketChartError,
+  } = useChartData(
+    DateUtils.getKoreanDayRange(startDate.toISOString().split('T')[0])
+      .startDate,
     DateUtils.getKoreanDayRange(startDate.toISOString().split('T')[0]).endDate
   )
 
-  const { data: socketTableData, loading: socketTableLoading, error: socketTableError } = useTableData(
-    DateUtils.getKoreanDayRange(startDate.toISOString().split('T')[0]).startDate,
+  const {
+    data: socketTableData,
+    loading: socketTableLoading,
+    error: socketTableError,
+  } = useTableData(
+    DateUtils.getKoreanDayRange(startDate.toISOString().split('T')[0])
+      .startDate,
     DateUtils.getKoreanDayRange(startDate.toISOString().split('T')[0]).endDate
   )
 
@@ -107,7 +117,11 @@ export function useSensorData(): UseSensorDataReturn {
 
   useEffect(() => {
     if (socketChartError || socketTableError) {
-      setError(socketChartError || socketTableError || '데이터를 불러오는데 실패했습니다.')
+      setError(
+        socketChartError ||
+          socketTableError ||
+          '데이터를 불러오는데 실패했습니다.'
+      )
     }
   }, [socketChartError, socketTableError])
 

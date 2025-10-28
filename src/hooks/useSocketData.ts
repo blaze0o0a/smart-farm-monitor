@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ChartDataPoint, TableDataRow, CalibrationData } from '@/types/sensor'
+import {
+  ChartDataPoint,
+  TableDataRow,
+  CalibrationData,
+  SensorData,
+} from '@/types/sensor'
 import { useSocket } from './useSocket'
 
 // 대시보드 데이터 Hook
@@ -45,7 +50,7 @@ export function useDashboardData() {
     data,
     loading,
     error,
-    refetch: fetchData
+    refetch: fetchData,
   }
 }
 
@@ -92,7 +97,7 @@ export function useChartData(startDate: string, endDate: string) {
     data,
     loading,
     error,
-    refetch: fetchData
+    refetch: fetchData,
   }
 }
 
@@ -139,7 +144,7 @@ export function useTableData(startDate: string, endDate: string) {
     data,
     loading,
     error,
-    refetch: fetchData
+    refetch: fetchData,
   }
 }
 
@@ -158,11 +163,14 @@ export function useCalibrationData() {
     socket.emit('request:calibration')
   }, [socket, isConnected])
 
-  const updateCalibration = useCallback((key: string, value: number) => {
-    if (!socket || !isConnected) return
+  const updateCalibration = useCallback(
+    (key: string, value: number) => {
+      if (!socket || !isConnected) return
 
-    socket.emit('update:calibration', { key, value })
-  }, [socket, isConnected])
+      socket.emit('update:calibration', { key, value })
+    },
+    [socket, isConnected]
+  )
 
   useEffect(() => {
     if (!socket) return
@@ -193,6 +201,39 @@ export function useCalibrationData() {
     loading,
     error,
     refetch: fetchData,
-    updateCalibration
+    updateCalibration,
+  }
+}
+
+// 실시간 센서 데이터 Hook
+export function useRealtimeData() {
+  const { socket, isConnected } = useSocket()
+  const [latestData, setLatestData] = useState<SensorData | null>(null)
+  const [isReceiving, setIsReceiving] = useState(false)
+
+  useEffect(() => {
+    if (!socket || !isConnected) {
+      setLatestData(null)
+      setIsReceiving(false)
+      return
+    }
+
+    setIsReceiving(true)
+
+    // 실시간 데이터 수신
+    socket.on('data:realtime', (newData: SensorData) => {
+      setLatestData(newData)
+    })
+
+    return () => {
+      socket.off('data:realtime')
+      setIsReceiving(false)
+    }
+  }, [socket, isConnected])
+
+  return {
+    latestData,
+    isReceiving,
+    hasData: latestData !== null,
   }
 }

@@ -1,6 +1,12 @@
+/**
+ * @fileoverview 차트 페이지 컴포넌트
+ * @description 센서 데이터의 시간대별 상세 차트를 표시하는 페이지
+ * @module app/chart/page
+ */
+
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   LineChart,
   Line,
@@ -14,6 +20,11 @@ import moment from 'moment'
 import useAppStore from '@/stores/useAppStore'
 import { useChartData } from '@/hooks/useSocketData'
 
+/**
+ * 차트 페이지 컴포넌트
+ * @description 선택한 날짜 범위의 센서 데이터를 시간대별 차트로 시각화
+ * @returns {JSX.Element} 차트 시각화 UI
+ */
 export default function ChartPage() {
   const { chartData, setChartData, setLoading, setError } = useAppStore()
   const [activeTab, setActiveTab] = useState('Temperature & Humidity')
@@ -24,10 +35,11 @@ export default function ChartPage() {
   const [endDate, setEndDate] = useState(new Date())
 
   // 소켓 기반 차트 데이터
-  const { data: socketChartData, loading: socketLoading, error: socketError } = useChartData(
-    startDate.toISOString(),
-    endDate.toISOString()
-  )
+  const {
+    data: socketChartData,
+    loading: socketLoading,
+    error: socketError,
+  } = useChartData(startDate.toISOString(), endDate.toISOString())
 
   // 소켓 데이터를 스토어에 동기화
   useEffect(() => {

@@ -1,12 +1,18 @@
-import { ChartDataPoint, TableDataRow, CalibrationData } from '@/types/sensor'
+import {
+  ChartDataPoint,
+  TableDataRow,
+  CalibrationData,
+  SensorData,
+} from '@/types/sensor'
 
 // Socket 이벤트 타입 정의
 export interface ServerToClientEvents {
+  'data:realtime': (data: SensorData) => void // 실시간 센서 데이터
   'data:dashboard': (data: ChartDataPoint[]) => void
   'data:chart': (data: ChartDataPoint[]) => void
   'data:table': (data: TableDataRow[]) => void
   'data:calibration': (data: CalibrationData) => void
-  'error': (message: string) => void
+  error: (message: string) => void
 }
 
 export interface ClientToServerEvents {

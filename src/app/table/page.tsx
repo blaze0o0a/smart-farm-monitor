@@ -1,11 +1,22 @@
+/**
+ * @fileoverview 테이블 페이지 컴포넌트
+ * @description 센서 데이터를 페이지네이션된 테이블로 표시하는 페이지
+ * @module app/table/page
+ */
+
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import moment from 'moment'
 import useAppStore from '@/stores/useAppStore'
 import { TableDataRow } from '@/types/sensor'
 import { useTableData } from '@/hooks/useSocketData'
 
+/**
+ * 테이블 페이지 컴포넌트
+ * @description 선택한 날짜 범위의 센서 데이터를 페이지네이션된 테이블로 표시
+ * @returns {JSX.Element} 테이블 UI
+ */
 export default function TablePage() {
   const { tableData, setTableData, isLoading, setLoading, setError } =
     useAppStore()
@@ -25,10 +36,11 @@ export default function TablePage() {
   } | null>(null)
 
   // 소켓 기반 테이블 데이터
-  const { data: socketTableData, loading: socketLoading, error: socketError } = useTableData(
-    startDate.toISOString(),
-    endDate.toISOString()
-  )
+  const {
+    data: socketTableData,
+    loading: socketLoading,
+    error: socketError,
+  } = useTableData(startDate.toISOString(), endDate.toISOString())
 
   // 소켓 데이터를 스토어에 동기화
   useEffect(() => {
